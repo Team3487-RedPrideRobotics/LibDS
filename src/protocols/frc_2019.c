@@ -115,8 +115,20 @@ static DS_String radio_address (void)
  */
 static DS_String robot_address (void)
 {
-    return DS_GetStaticIP (10, CFG, GetTeamNumber(), 2);
+    return DS_GetStaticIP (10, CFG_GetTeamNumber(), 2);
     //return DS_StrFormat ("roboRIO-%d-frc.local", CFG_GetTeamNumber());
+}
+
+static DS_String get_joystick_data(void)
+{
+  return DS_StrNew("");
+  //TODO read DS packets
+}
+
+static float decode_voltage(uint8_t upper, uint8_t lower)
+{
+  return (float) 0;
+  //TODO find voltage
 }
 
 /**
