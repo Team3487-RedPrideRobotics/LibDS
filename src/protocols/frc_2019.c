@@ -119,16 +119,63 @@ static DS_String robot_address (void)
     //return DS_StrFormat ("roboRIO-%d-frc.local", CFG_GetTeamNumber());
 }
 
+/**
+ * Returns the size of the given \a joystick. This function is used to generate
+ * joystick data (which is sent to the robot) and to resize the client->robot
+ * datagram automatically.
+ */
+static uint8_t get_joystick_size (const int joystick)
+{
+    int header_size = 2;
+    int button_data = 3;
+    int axis_data = DS_GetJoystickNumAxes (joystick) + 1;
+    int hat_data = (DS_GetJoystickNumHats (joystick) * 2) + 1;
+
+    return header_size + button_data + axis_data + hat_data;
+}
+
 static DS_String get_joystick_data(void)
 {
-  return DS_StrNew("");
-  //TODO read DS packets
+  /* Initialize the variables */
+    int i = 0;
+    int j = 0;
+    DS_String data = DS_StrNewLen (0);
+
+    /* Generate data for each joystick */
+    for (i = 0; i < DS_GetJoystickCount(); ++i) {
+        DS_StrAppend (&data, get_joystick_size (i));
+        DS_StrAppend (&data, cTagJoystick);
+
+        /* Add axis data */
+        DS_StrAppend (&data, DS_GetJoystickNumAxes (i));
+        for (j = 0; j < DS_GetJoystickNumAxes (i); ++j)
+            DS_StrAppend (&data, DS_FloatToByte (DS_GetJoystickAxis (i, j), 1));
+
+        /* Generate button data */
+        uint16_t button_flags = 0;
+        for (j = 0; j < DS_GetJoystickNumButtons (i); ++j)
+            button_flags += DS_GetJoystickButton (i, j) ? (int) pow (2, j) : 0;
+
+        /* Add button data */
+        DS_StrAppend (&data, DS_GetJoystickNumButtons (i));
+        DS_StrAppend (&data, (uint8_t) (button_flags >> 8));
+        DS_StrAppend (&data, (uint8_t) (button_flags));
+
+        /* Add hat data */
+        DS_StrAppend (&data, DS_GetJoystickNumHats (i));
+        for (j = 0; j < DS_GetJoystickNumHats (i); ++j) {
+            DS_StrAppend (&data, (uint8_t) (DS_GetJoystickHat (i, j) >> 8));
+            DS_StrAppend (&data, (uint8_t) (DS_GetJoystickHat (i, j)));
+        }
+    }
+
+    /* Return obtained data */
+    return data;
 }
 
 static float decode_voltage(uint8_t upper, uint8_t lower)
 {
-  return (float) 0;
-  //TODO find voltage
+  return ((float) upper) + ((float) lower / 0xff);
 }
 
 /**
