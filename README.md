@@ -1,6 +1,10 @@
-# LibDS Rewrite
+# LibDS Rewrite :robot:
 Do you want to use a RoboRIO outside of FRC? Do you want to avoid a part of the crippling price-tag of proprietary software?
 We are trying to solve both of these! One of our projects, the Quaker Imagineering Robotic Assistant (QIRA) needs software just like this!
+
+### Warning!
+Since QIRA is the primary purpose for this project, her needs will be satisfied first. :japanese_ogre:
+
 We will try to maintain this software as often as possible, but we are a FRC oriented team, so our scheduling is based around the season.
 
 Any help would be greatly appreciated!
