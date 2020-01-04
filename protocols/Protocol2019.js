@@ -50,6 +50,8 @@ module.exports = class Protocol2019 {
             "BLU2":0x04,
             "BLU3":0x05,
             'STCK':0x0c, //Joystick tag
+            'DATE':0x0f,
+            'TMZN':0x10,
         };
         /**Ports */
         this.port_robo_recv = 1150;
@@ -67,15 +69,15 @@ module.exports = class Protocol2019 {
     }
     
     get_control_code() {
-        return this.codes[this.context.get_control_code()];
+        return this.codes[this.control_code];
     }
 
     get_request_code() {
-        return this.codes[this.context.get_request_code()];
+        return this.codes[this.request_code];
     }
 
     get_station_code() {
-        return this.codes[this.context.get_station_code()];
+        return this.codes[this.station_code];
     }
 
     decode_status(control, status) {
@@ -88,7 +90,29 @@ module.exports = class Protocol2019 {
     }
 
     get_time_data() {
-        //TODO later
+        //TODO 
+        var header_data = new UInt8Array(14);
+        const date = new Date();
+        header_data[0] = 0x0b;
+        header_data[1] = this.codes['DATE'];
+        
+        var ms = date.getTime();
+        header_data[2] = ms >> 24
+        header_data[3] = ms >> 16
+        header_data[4] = ms >> 8
+        header_data[5] = ms
+        header_data[6] = date.getSeconds();
+        header_data[7] = date.getMinutes();
+        header_data[8] = date.getHours();
+        header_data[9] = date.getDay();
+        header_data[10] = date.getMonth();
+        header_data[11] = date.getFullYear();
+        
+        var dname = Intl.DateTimeFormat().resolvedOptions().timeZone
+        header_data[12] = dname.length 
+        header_data[13] = this.codes['TMZN']
+        
+        return concatArray(header_data,new TextEncoder().encode(dname));
     }
 
     get_joystick_size(stick) {
@@ -109,7 +133,14 @@ module.exports = class Protocol2019 {
          *      buttons:[1,0],
          *      hats:[]
          *  },
+         * station_code:"BlU1",
+         * control_code:"TELE",
+         * request_code:"👹"
          * ]}*/
+
+        this.station_code = data.station_code;
+        this.request_code = data.request_code;
+        this.control_code = data.control_code;
 
         var packet_data = new Uint8Array(0);
         data.sticks.forEach((object,index,arr) => {
@@ -136,6 +167,8 @@ module.exports = class Protocol2019 {
             });
 
         });
+
+        return packet_data;
     }
 
     get_robot_packet() {
@@ -144,16 +177,17 @@ module.exports = class Protocol2019 {
         array[0] = this.sent_robot_packets>>8;
         array[1] = this.sent_robot_packets;
 
-        concatArray(array, this.get_control_code());
-        concatArray(array, this.get_request_code());
-        concatArray(array, this.get_station_code());
+        var jData = this.get_joystick_data();
+        concatArray(array, this.control_code);
+        concatArray(array, this.request_code);
+        concatArray(array, this.station_code);
 
         if(sendData) {
             concatArray(array, this.get_time_data());
         }
 
         if(sent_robot_packets > 5) {
-            concatArray(array, this.get_joystick_data());
+            concatArray(array, jData);
         }
 
         this.sent_robot_packets += 1;
