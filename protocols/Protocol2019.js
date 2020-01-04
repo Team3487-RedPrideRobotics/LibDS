@@ -15,6 +15,8 @@ function get_robot_address(team_number) {
     return `10.${id.substring(0,2)}.${id.substring(2)}`;
 }
 
+var robot_data = {};
+
 /**
  * Context Requirements
  * 
@@ -22,6 +24,7 @@ function get_robot_address(team_number) {
  * fn control code
  * fn request code
  * fn station code
+ * fn get_joystick_data
  * 
  * fn started
  * fn stopped
@@ -50,6 +53,8 @@ module.exports = class Protocol2019 {
             "BLU2":0x04,
             "BLU3":0x05,
             'STCK':0x0c, //Joystick tag
+            'DATE':0x0f, // Date Tag
+            'TMZN':0x10, //Timezone
         };
         /**Ports */
         this.port_robo_recv = 1150;
@@ -88,7 +93,28 @@ module.exports = class Protocol2019 {
     }
 
     get_time_data() {
-        //TODO later
+        let array = new UInt8Array(14);
+        array[0] = 0x0b;
+        array[1] = this.codes['DATE'];
+
+        let date = new Date();
+        var ms = new date.getTime();
+
+        array[2] = ms >> 24;
+        array[3] = ms >> 16;
+        array[4] = ms >> 8;
+        array[5] = ms;
+        array[6] = da
+        array[7] = ms.getSeconds();
+        array[8] = ms.getMinutes();
+        array[9] = ms.getHour();
+        array[10] = ms.getDate();
+        array[11] = ms.getMonth()
+        let tmzn = Intl.DateTimeFormat().resolvedOptions().timeZone
+        array[12] = tmzn.length;
+        array[13] = this.codes('TMZN')
+
+        return concatArray(array, new TextEncoder().encode(tmzn))
     }
 
     get_joystick_size(stick) {
@@ -101,13 +127,13 @@ module.exports = class Protocol2019 {
     }
 
     get_joystick_data() {
-        var data = context.get_joystick_data();
+        var data = context.get_joystick_data(robot_data);
         //Data is an object with an array of joystick objects
         /**{sticks:[
          *  {
          *      axis:[0-255],
          *      buttons:[1,0],
-         *      hats:[]
+         *      hats:[???]
          *  },
          * ]}*/
 
@@ -161,6 +187,16 @@ module.exports = class Protocol2019 {
         return array.buffer;
     }
 
+    read_extended(msg, rinfo) {
+        if(msg.length < 9){
+            return;
+        }
+
+        //tag = msg[9];
+        //TODO see if cpu data sent
+
+    }
+
     read_robot_packet(msg, rinfo) {
 
         msg = Uint8Array(msg);
@@ -174,6 +210,12 @@ module.exports = class Protocol2019 {
         rinfo.request = msg[7];
 
         rinfo.voltage = msg[5]+(msg[6]/0xff);
+
+        robot_data = rinfo;
+
+        if(msg.length > 9) {
+            read_extended(msg, rinfo);
+        }
 
     }
 
