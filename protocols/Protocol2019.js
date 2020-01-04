@@ -90,31 +90,6 @@ module.exports = class Protocol2019 {
     }
 
     get_time_data() {
-        let array = new UInt8Array(14);
-        array[0] = 0x0b;
-        array[1] = this.codes['DATE'];
-
-        let date = new Date();
-        var ms = new date.getTime();
-
-        array[2] = ms >> 24;
-        array[3] = ms >> 16;
-        array[4] = ms >> 8;
-        array[5] = ms;
-        array[6] = da
-        array[7] = ms.getSeconds();
-        array[8] = ms.getMinutes();
-        array[9] = ms.getHour();
-        array[10] = ms.getDate();
-        array[11] = ms.getMonth()
-        let tmzn = Intl.DateTimeFormat().resolvedOptions().timeZone
-        array[12] = tmzn.length;
-        array[13] = this.codes('TMZN')
-
-        return concatArray(array, new TextEncoder().encode(tmzn))
-    }
-
-    get_joystick_size(stick) {
         let axis_data = stick.axis.length + 1;
         let hat_data = (stick.hats.length * 2) + 1;
 
@@ -132,7 +107,6 @@ module.exports = class Protocol2019 {
          *      buttons:[1,0],
          *      hats:[???]
          *  },
-         * "station_code":'BLU1',
          * "request_code":'👹',
          * "control_code":'TELE' 
          * ]}*/
@@ -166,6 +140,8 @@ module.exports = class Protocol2019 {
             });
 
         });
+
+        return packet_data;
     }
 
     get_robot_packet() {
