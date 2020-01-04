@@ -15,13 +15,13 @@ function get_robot_address(team_number) {
     return `10.${id.substring(0,2)}.${id.substring(2)}`;
 }
 
+var robot_data = {};
+
 /**
  * Context Requirements
  * 
  * team number
- * fn control code
- * fn request code
- * fn station code
+ * fn get_joystick_data
  * 
  * fn started
  * fn stopped
@@ -50,8 +50,8 @@ module.exports = class Protocol2019 {
             "BLU2":0x04,
             "BLU3":0x05,
             'STCK':0x0c, //Joystick tag
-            'DATE':0x0f,
-            'TMZN':0x10,
+            'DATE':0x0f, // Date Tag
+            'TMZN':0x10, //Timezone
         };
         /**Ports */
         this.port_robo_recv = 1150;
@@ -90,32 +90,6 @@ module.exports = class Protocol2019 {
     }
 
     get_time_data() {
-        //TODO 
-        var header_data = new UInt8Array(14);
-        const date = new Date();
-        header_data[0] = 0x0b;
-        header_data[1] = this.codes['DATE'];
-        
-        var ms = date.getTime();
-        header_data[2] = ms >> 24
-        header_data[3] = ms >> 16
-        header_data[4] = ms >> 8
-        header_data[5] = ms
-        header_data[6] = date.getSeconds();
-        header_data[7] = date.getMinutes();
-        header_data[8] = date.getHours();
-        header_data[9] = date.getDay();
-        header_data[10] = date.getMonth();
-        header_data[11] = date.getFullYear();
-        
-        var dname = Intl.DateTimeFormat().resolvedOptions().timeZone
-        header_data[12] = dname.length 
-        header_data[13] = this.codes['TMZN']
-        
-        return concatArray(header_data,new TextEncoder().encode(dname));
-    }
-
-    get_joystick_size(stick) {
         let axis_data = stick.axis.length + 1;
         let hat_data = (stick.hats.length * 2) + 1;
 
@@ -125,17 +99,16 @@ module.exports = class Protocol2019 {
     }
 
     get_joystick_data() {
-        var data = context.get_joystick_data();
+        var data = context.get_joystick_data(robot_data);
         //Data is an object with an array of joystick objects
         /**{sticks:[
          *  {
          *      axis:[0-255],
          *      buttons:[1,0],
-         *      hats:[]
+         *      hats:[???]
          *  },
-         * station_code:"BlU1",
-         * control_code:"TELE",
-         * request_code:"👹"
+         * "request_code":'👹',
+         * "control_code":'TELE' 
          * ]}*/
 
         this.station_code = data.station_code;
@@ -177,22 +150,33 @@ module.exports = class Protocol2019 {
         array[0] = this.sent_robot_packets>>8;
         array[1] = this.sent_robot_packets;
 
-        var jData = this.get_joystick_data();
-        concatArray(array, this.control_code);
-        concatArray(array, this.request_code);
-        concatArray(array, this.station_code);
+        let control_data = this.get_joystick_data()
+
+        concatArray(array, this.get_control_code());
+        concatArray(array, this.get_request_code());
+        concatArray(array, this.get_station_code());
 
         if(sendData) {
             concatArray(array, this.get_time_data());
         }
 
         if(sent_robot_packets > 5) {
-            concatArray(array, jData);
+            concatArray(array, control_data);
         }
 
         this.sent_robot_packets += 1;
 
         return array.buffer;
+    }
+
+    read_extended(msg, rinfo) {
+        if(msg.length < 9){
+            return;
+        }
+
+        //tag = msg[9];
+        //TODO see if cpu data sent
+
     }
 
     read_robot_packet(msg, rinfo) {
@@ -209,15 +193,21 @@ module.exports = class Protocol2019 {
 
         rinfo.voltage = msg[5]+(msg[6]/0xff);
 
+        robot_data = rinfo;
+
+        if(msg.length > 9) {
+            read_extended(msg, rinfo);
+        }
+
     }
 
     robot_server_started() {
         this.reset();
-        this.context.on_started()();
+        this.context.on_started();
     }
 
     robot_server_stopped() {
-        this.context.on_stopped()();
+        this.context.on_stopped();
     }
 
 }
