@@ -21,9 +21,6 @@ var robot_data = {};
  * Context Requirements
  * 
  * team number
- * fn control code
- * fn request code
- * fn station code
  * fn get_joystick_data
  * 
  * fn started
@@ -72,15 +69,15 @@ module.exports = class Protocol2019 {
     }
     
     get_control_code() {
-        return this.codes[this.context.get_control_code()];
+        return this.codes[this.control_code];
     }
 
     get_request_code() {
-        return this.codes[this.context.get_request_code()];
+        return this.codes[this.request_code];
     }
 
     get_station_code() {
-        return this.codes[this.context.get_station_code()];
+        return this.codes[this.station_code];
     }
 
     decode_status(control, status) {
@@ -135,7 +132,14 @@ module.exports = class Protocol2019 {
          *      buttons:[1,0],
          *      hats:[???]
          *  },
+         * "station_code":'BLU1',
+         * "request_code":'👹',
+         * "control_code":'TELE' 
          * ]}*/
+
+        this.station_code = data.station_code;
+        this.request_code = data.request_code;
+        this.control_code = data.control_code;
 
         var packet_data = new Uint8Array(0);
         data.sticks.forEach((object,index,arr) => {
@@ -170,6 +174,8 @@ module.exports = class Protocol2019 {
         array[0] = this.sent_robot_packets>>8;
         array[1] = this.sent_robot_packets;
 
+        let control_data = this.get_joystick_data()
+
         concatArray(array, this.get_control_code());
         concatArray(array, this.get_request_code());
         concatArray(array, this.get_station_code());
@@ -179,7 +185,7 @@ module.exports = class Protocol2019 {
         }
 
         if(sent_robot_packets > 5) {
-            concatArray(array, this.get_joystick_data());
+            concatArray(array, control_data);
         }
 
         this.sent_robot_packets += 1;
@@ -221,11 +227,11 @@ module.exports = class Protocol2019 {
 
     robot_server_started() {
         this.reset();
-        this.context.on_started()();
+        this.context.on_started();
     }
 
     robot_server_stopped() {
-        this.context.on_stopped()();
+        this.context.on_stopped();
     }
 
 }
